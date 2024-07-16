@@ -1,6 +1,4 @@
-﻿using DnsClient;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using MongoDB.Entities;
 using SearchService.Helpers;
 using SearchService.Models;
