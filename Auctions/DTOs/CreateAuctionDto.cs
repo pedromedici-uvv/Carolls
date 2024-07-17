@@ -20,6 +20,6 @@ namespace AuctionService.DTOs
         [Required]
         public int ReversePrice { get; set; }
         [Required]
-        public DateTime ActionEnd { get; set; }
+        public DateTime AuctionEnd { get; set; }
     }
 }

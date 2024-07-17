@@ -3,6 +3,8 @@ using AuctionService.DTOs;
 using AuctionService.Entities;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Contracts;
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
@@ -15,11 +17,13 @@ namespace AuctionService.Controllers
     {
         private readonly AuctionDbContext _context;
         private readonly IMapper _mapper;
+        private readonly IPublishEndpoint _publishEndpoint;
 
-        public AuctionsController(AuctionDbContext context, IMapper mapper)
+        public AuctionsController(AuctionDbContext context, IMapper mapper, IPublishEndpoint publishEndpoint)
         {
             _context = context;
             _mapper = mapper;
+            _publishEndpoint = publishEndpoint;
         }
 
         [HttpGet]
@@ -57,14 +61,15 @@ namespace AuctionService.Controllers
             auction.Seller = "test";
 
             _context.Auctions.Add(auction);
-            try
-            {
-                var result = await _context.SaveChangesAsync();
-            }
-            catch (Exception e)
-            {
-                await Console.Out.WriteLineAsync(e.Message);
-            }
+
+            var newAuction = _mapper.Map<AuctionDto>(auction);
+
+            await _publishEndpoint.Publish(_mapper.Map<AuctionCreated>(newAuction));
+            
+            
+            var result = await _context.SaveChangesAsync() > 0;
+
+            if (!result) return BadRequest("Could not save changes to DB");
 
             return CreatedAtAction(nameof(GetAuctionById), new { id = auction.Id }, _mapper.Map<AuctionDto>(auction));
         }
@@ -84,18 +89,15 @@ namespace AuctionService.Controllers
             auctionEntity.Item.Mileage = auction.Mileage ?? auctionEntity.Item.Mileage;
             auctionEntity.Item.Year = auction.Year ?? auctionEntity.Item.Year;
 
+            await _publishEndpoint.Publish(_mapper.Map<AuctionUpdated>(auctionEntity));
 
+           
+            var results = await _context.SaveChangesAsync() > 0;
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch { 
+            if (results)
+                return Ok();
 
-                return BadRequest("Problem saving changes");
-            }
-
-            return Ok();
+            return BadRequest();
         }
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteAuction(Guid id)
@@ -111,6 +113,7 @@ namespace AuctionService.Controllers
 
             try
             {
+                await _publishEndpoint.Publish<AuctionDeleted>(new { Id = auction.Id.ToString()});
                 await _context.SaveChangesAsync();
             }
             catch (Exception )
