@@ -5,6 +5,7 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Contracts;
 using MassTransit;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
@@ -52,13 +53,13 @@ namespace AuctionService.Controllers
 
             return _mapper.Map<AuctionDto>(auction);
         }
-
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<AuctionDto>> CreateAuction(CreateAuctionDto createAuctionDto)
         {
             var auction = _mapper.Map<Auction>(createAuctionDto);
             //TODO: add current user as seller
-            auction.Seller = "test";
+            auction.Seller = User.Identity.Name;
 
             _context.Auctions.Add(auction);
 
@@ -73,7 +74,7 @@ namespace AuctionService.Controllers
 
             return CreatedAtAction(nameof(GetAuctionById), new { id = auction.Id }, _mapper.Map<AuctionDto>(auction));
         }
-
+        [Authorize]
         [HttpPut("{id}")]
         public async Task<ActionResult> UpdateAuction(Guid id, UpdateAuctionDto auction)
         {
@@ -83,6 +84,8 @@ namespace AuctionService.Controllers
                 return NotFound();
 
             //TODO: check seller = username
+            if(auctionEntity.Seller != User.Identity.Name)
+                return Forbid();
             auctionEntity.Item.Make = auction.Make ?? auctionEntity.Item.Make;
             auctionEntity.Item.Model = auction.Model ?? auctionEntity.Item.Model;
             auctionEntity.Item.Color = auction.Color ?? auctionEntity.Item.Color;
@@ -108,6 +111,8 @@ namespace AuctionService.Controllers
                 return NotFound();
 
             //TODO: check if seller = username
+            if(auction.Seller != User.Identity.Name)
+                return Forbid();
 
             _context.Auctions.Remove(auction);
 
