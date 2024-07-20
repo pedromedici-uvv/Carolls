@@ -14,9 +14,9 @@ COPY src/IdentityService/IdentityService.csproj src/IdentityService/IdentityServ
 RUN dotnet restore Carolls.sln
 
 # Copy the app folders
-COPY src/AuctionService src/AuctionService
+COPY src/SearchService src/SearchService
 COPY src/Contracts src/Contracts
-WORKDIR /app/src/AuctionService
+WORKDIR /app/src/SearchService
 RUN dotnet publish -c Release -o /app/src/out
 
 
@@ -24,4 +24,4 @@ RUN dotnet publish -c Release -o /app/src/out
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app 
 COPY --from=build /app/src/out .
-ENTRYPOINT ["dotnet", "AuctionService.dll"]
+ENTRYPOINT ["dotnet", "SearchService.dll"]
